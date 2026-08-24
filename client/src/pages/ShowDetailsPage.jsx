@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 
@@ -10,11 +10,7 @@ function ShowDetailsPage() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchShowDetails();
-  }, [eventId, showId]);
-
-  const fetchShowDetails = async () => {
+  const fetchShowDetails = useCallback(async () => {
     try {
       const data = await api.getShowDetails(eventId, showId);
       setShow(data);
@@ -23,7 +19,11 @@ function ShowDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId, showId]);
+
+  useEffect(() => {
+    fetchShowDetails();
+  }, [fetchShowDetails]);
 
   const handleSeatSelect = (seatNumber) => {
     setSelectedSeats(prev => 
@@ -55,7 +55,7 @@ function ShowDetailsPage() {
       <div style={{ marginTop: '30px' }}>
         <h3>Select Your Seats</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px', maxWidth: '400px' }}>
-          {show.available_seats.map((seat) => (
+          {show.available_seats && show.available_seats.map((seat) => (
             <button
               key={seat}
               onClick={() => handleSeatSelect(seat)}
@@ -86,7 +86,7 @@ function ShowDetailsPage() {
                 cursor: 'pointer'
               }}
             >
-              Book Selected Seats (${selectedSeats.length * show.price})
+              Book Selected Seats (${selectedSeats.length * (show.price || 0)})
             </button>
           </div>
         )}

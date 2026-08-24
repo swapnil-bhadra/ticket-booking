@@ -18,7 +18,7 @@ function LoginPage() {
       const response = await api.login(email, password);
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      window.location.reload();
+      navigate('/events'); // ← Now using navigate!
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
