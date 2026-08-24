@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build:client",
+  "outputDirectory": "client/build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "create-react-app",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/client/build/index.html"
+    }
+  ]
+}
