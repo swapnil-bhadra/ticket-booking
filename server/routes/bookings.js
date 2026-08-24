@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import pool from '../config/database.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -28,7 +28,6 @@ router.post('/', authMiddleware, async (req, res) => {
   const { show_id, seats } = req.body;
   
   try {
-    // Check if seats are available
     const seatCheck = await pool.query(
       'SELECT * FROM seats WHERE show_id = $1 AND seat_number = ANY($2) AND status = $3',
       [show_id, seats, 'available']
@@ -38,7 +37,6 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Some seats are not available' });
     }
     
-    // Create booking
     const result = await pool.query(
       `INSERT INTO bookings (user_id, show_id, seats, total_price, status) 
        VALUES ($1, $2, $3, $4, $5) 
@@ -46,7 +44,6 @@ router.post('/', authMiddleware, async (req, res) => {
       [req.user.id, show_id, seats, seats.length * 10, 'confirmed']
     );
     
-    // Update seat status
     await pool.query(
       'UPDATE seats SET status = $1 WHERE show_id = $2 AND seat_number = ANY($3)',
       ['booked', show_id, seats]
@@ -71,7 +68,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
     
-    // Release seats
     await pool.query(
       'UPDATE seats SET status = $1 WHERE show_id = $2 AND seat_number = ANY($3)',
       ['available', result.rows[0].show_id, result.rows[0].seats]
