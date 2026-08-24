@@ -563,6 +563,4 @@ CREATE INDEX idx_bookings_show ON bookings(show_id);
 - Notification system (SMS + Email)
 - Resale marketplace for tickets
 
-## 🤝 Support
 
-For issues or questions, open a GitHub issue or contact support@ticketbooking.com
