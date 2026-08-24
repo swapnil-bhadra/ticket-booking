@@ -1,93 +1,85 @@
-import jwt from 'jsonwebtoken';
+import express from 'express';
 import bcrypt from 'bcryptjs';
-import { query } from '../db/index.js';
+import jwt from 'jsonwebtoken';
+import pool from '../config/database.js';  // ← Add this import
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const router = express.Router();
 
-/**
- * Generate JWT token
- */
-export function generateToken(userId, role) {
-  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '7d' });
-}
-
-/**
- * Verify and decode JWT token
- */
-export function verifyToken(token) {
+// Register
+router.post('/register', async (req, res) => {
+  const { name, email, password, role } = req.body;
+  
   try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    throw new Error('Invalid token');
-  }
-}
-
-/**
- * Hash password
- */
-export async function hashPassword(password) {
-  return bcrypt.hash(password, 10);
-}
-
-/**
- * Compare password with hash
- */
-export async function comparePassword(password, hash) {
-  return bcrypt.compare(password, hash);
-}
-
-/**
- * Middleware to authenticate requests
- */
-export function authMiddleware(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid authorization header' });
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
+    // Check if user exists
+    const userCheck = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
     
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-}
-
-/**
- * Middleware to check role-based access
- */
-export function requireRole(...roles) {
-  return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ message: 'User already exists' });
     }
-    next();
-  };
-}
-
-/**
- * Get user by ID from database
- */
-export async function getUserById(userId) {
-  try {
-    const result = await query('SELECT id, email, name, role FROM users WHERE id = $1', [userId]);
-    return result.rows[0] || null;
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create user
+    const result = await pool.query(
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name, email, hashedPassword, role || 'customer']
+    );
+    
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    throw error;
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-}
+});
 
-/**
- * Get user by email from database
- */
-export async function getUserByEmail(email) {
+// Login
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  
   try {
-    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
-    return result.rows[0] || null;
+    // Get user
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const user = result.rows[0];
+    
+    // Check password
+    const validPassword = await bcrypt.compare(password, user.password);
+    
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Generate token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
   } catch (error) {
-    throw error;
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-}
+});
+
+export default router;

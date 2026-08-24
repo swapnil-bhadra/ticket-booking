@@ -1,40 +1,33 @@
 import cron from 'node-cron';
-import { releaseExpiredSeats } from '../utils/seatManager.js';
-import { processExpiredOffers } from '../utils/waitlistManager.js';
+import pool from '../config/database.js';  // ← Add this import
 
-/**
- * Schedule background jobs for seat hold TTL and waitlist offer expiry
- */
+// Function to release expired seats
+async function releaseExpiredSeats() {
+  try {
+    const result = await pool.query(`
+      UPDATE seats 
+      SET status = 'available', hold_expires_at = NULL 
+      WHERE status = 'held' AND hold_expires_at < NOW()
+      RETURNING *
+    `);
+    console.log(`✅ Released ${result.rowCount} expired seats`);
+    return result.rows;
+  } catch (error) {
+    console.error('Error in expired seat release job:', error);
+    throw error;
+  }
+}
 
-// Release expired held seats every minute
-export function scheduleExpiredSeatRelease() {
+// Initialize scheduler
+export function initializeScheduler() {
+  // Run every minute to check for expired holds
   cron.schedule('* * * * *', async () => {
     try {
       await releaseExpiredSeats();
     } catch (error) {
-      console.error('Error in expired seat release job:', error);
+      console.error('Scheduler error:', error);
     }
   });
-  console.log('Scheduled: Expired seat release job (every minute)');
-}
 
-// Process expired waitlist offers every minute
-export function scheduleExpiredOfferProcessing() {
-  cron.schedule('* * * * *', async () => {
-    try {
-      await processExpiredOffers();
-    } catch (error) {
-      console.error('Error in expired offer processing job:', error);
-    }
-  });
-  console.log('Scheduled: Expired offer processing job (every minute)');
-}
-
-/**
- * Initialize all scheduled jobs
- */
-export function initializeScheduler() {
-  scheduleExpiredSeatRelease();
-  scheduleExpiredOfferProcessing();
-  console.log('Scheduler initialized');
+  console.log('✅ Scheduler initialized - checking expired seats every minute');
 }
