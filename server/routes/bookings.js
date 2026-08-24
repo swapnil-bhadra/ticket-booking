@@ -2,7 +2,7 @@ import pool from '../config/database.js';
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { query } from '../db/index.js';
-import middleware from '../middleware/auth.js';
+import {authMiddleware} from '../middleware/auth.js';
 import { holdSeat, releaseSeat, bookSeat, updateShowStatus } from '../utils/seatManager.js';
 import {
   addToWaitlist,
