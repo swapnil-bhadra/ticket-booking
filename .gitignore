@@ -46,6 +46,6 @@ Thumbs.db
 .cache/
 temp/
 tmp/
-SYSTEM_DESIGN.md
-QUICKSTART.md
-DEPLOYMENT.md
+./SYSTEM_DESIGN.md
+./QUICKSTART.md
+./DEPLOYMENT.md
