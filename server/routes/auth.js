@@ -2,14 +2,7 @@ import pool from '../config/database.js';
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { query } from '../db/index.js';
-import {
-  hashPassword,
-  comparePassword,
-  generateToken,
-  authMiddleware,
-  getUserById,
-  getUserByEmail,
-} from '../middleware/auth.js';
+import middleware from '../middleware/auth.js';
 
 const router = express.Router();
 
